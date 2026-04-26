@@ -1,0 +1,70 @@
+import { createSign } from 'crypto';
+
+async function getAccessToken() {
+  const sa = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  const now = Math.floor(Date.now() / 1000);
+
+  const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600
+  })).toString('base64url');
+
+  const sign = createSign('RSA-SHA256');
+  sign.update(`${header}.${payload}`);
+  const sig = sign.sign(sa.private_key, 'base64url');
+  const jwt = `${header}.${payload}.${sig}`;
+
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt
+    })
+  });
+
+  const { access_token } = await tokenRes.json();
+  return access_token;
+}
+
+export default async function handler(req, res) {
+  try {
+    const token = await getAccessToken();
+    const id = process.env.GOOGLE_SPREADSHEET_ID;
+    const range = 'Database!A2:L';
+
+    const sheetsRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const { values } = await sheetsRes.json();
+    if (!values) return res.json({ recipes: [] });
+
+    const recipes = values
+      .filter(r => r[0])
+      .map(r => ({
+        name: r[0] || '',
+        author: r[1] || '',
+        type: r[2] || '',
+        ingredients: r[3] || '',
+        location: r[4] || '',
+        notes: r[5] || '',
+        cook_time: r[6] ? parseInt(r[6]) : null,
+        weekday_safe: (r[7] || '').toLowerCase() === 'yes',
+        season: r[8] || 'All',
+        contains_eggs: (r[9] || '').toLowerCase() === 'yes',
+        contains_mushrooms: (r[10] || '').toLowerCase() === 'yes',
+        serves: r[11] ? parseInt(r[11]) : null
+      }));
+
+    res.setHeader('Cache-Control', 's-maxage=3600');
+    res.json({ recipes, updated: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
