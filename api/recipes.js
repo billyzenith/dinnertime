@@ -1,7 +1,6 @@
 import { createSign } from 'crypto';
 
-async function getAccessToken() {
-  const sa = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+async function getAccessToken(sa) {
   const now = Math.floor(Date.now() / 1000);
 
   const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
@@ -27,22 +26,52 @@ async function getAccessToken() {
     })
   });
 
-  const { access_token } = await tokenRes.json();
-  return access_token;
+  const tokenData = await tokenRes.json();
+  if (!tokenData.access_token) {
+    throw new Error(`Failed to get access token: ${JSON.stringify(tokenData)}`);
+  }
+  return tokenData.access_token;
 }
 
 export default async function handler(req, res) {
-  try {
-    const token = await getAccessToken();
-    const id = process.env.GOOGLE_SPREADSHEET_ID;
-    const range = 'Database!A2:L';
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    return res.status(500).json({ error: 'Missing env var: GOOGLE_SERVICE_ACCOUNT_JSON' });
+  }
+  if (!process.env.GOOGLE_SPREADSHEET_ID) {
+    return res.status(500).json({ error: 'Missing env var: GOOGLE_SPREADSHEET_ID' });
+  }
 
+  let sa;
+  try {
+    sa = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  } catch (e) {
+    return res.status(500).json({ error: 'GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON', detail: e.message });
+  }
+
+  if (!sa.client_email || !sa.private_key) {
+    return res.status(500).json({ error: 'Service account JSON is missing client_email or private_key' });
+  }
+
+  let token;
+  try {
+    token = await getAccessToken(sa);
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to authenticate with Google', detail: e.message });
+  }
+
+  try {
+    const id = process.env.GOOGLE_SPREADSHEET_ID;
     const sheetsRes = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/Database!A2:L`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    const { values } = await sheetsRes.json();
+    const body = await sheetsRes.json();
+    if (body.error) {
+      return res.status(500).json({ error: 'Google Sheets API error', detail: body.error.message });
+    }
+
+    const { values } = body;
     if (!values) return res.json({ recipes: [] });
 
     const recipes = values
@@ -65,6 +94,6 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 's-maxage=3600');
     res.json({ recipes, updated: new Date().toISOString() });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Unexpected error', detail: err.message });
   }
 }
