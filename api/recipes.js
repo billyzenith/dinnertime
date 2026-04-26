@@ -40,7 +40,6 @@ function containsAny(ingredients, terms) {
   return terms.some(t => {
     const idx = lower.indexOf(t);
     if (idx === -1) return false;
-    // Check word boundaries to avoid matching e.g. "eggplant"
     const before = idx === 0 || /\W/.test(lower[idx - 1]);
     const after = idx + t.length >= lower.length || /\W/.test(lower[idx + t.length]);
     return before && after;
@@ -75,7 +74,6 @@ export default async function handler(req, res) {
 
   try {
     const id = process.env.GOOGLE_SPREADSHEET_ID;
-    // Columns: A=Name, B=Author, C=Type, D=Ingredients, E=Location, F=Notes, G=CookTime, H=Season, I=Serves
     const sheetsRes = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/Database!A2:I`,
       { headers: { Authorization: `Bearer ${token}` } }
