@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meal Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F4EF;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE7;
+    --border: #E2DDD6;
+    --text: #1A1714;
+    --text2: #6B6560;
+    --text3: #9E9891;
+    --accent: #2D5016;
+    --accent-light: #EAF0E3;
+    --serif: 'Lora', Georgia, serif;
+    --sans: 'DM Sans', system-ui, sans-serif;
+    --radius: 10px;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .shell { max-width: 780px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+
+  header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    flex-wrap: wrap; gap: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.25rem; margin-bottom: 2rem;
+  }
+
+  h1 { font-family: var(--serif); font-size: 1.9rem; font-weight: 400; }
+
+  .meta { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+  .pill {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 3px 10px;
+    border-radius: 20px; background: var(--accent-light); color: var(--accent);
+  }
+
+  .db-status { font-size: 12px; color: var(--text3); }
+
+  section { margin-bottom: 1.75rem; }
+
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  @media (max-width: 480px) { .controls { grid-template-columns: 1fr; } }
+
+  select, input[type=text] {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--surface); font-family: var(--sans);
+    font-size: 14px; color: var(--text); appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239E9891' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  input[type=text] { background-image: none; padding-right: 12px; }
+
+  .checkbox-row {
+    display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 4px;
+  }
+
+  .check-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--text2); cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .check-label input { width: 14px; height: 14px; accent-color: var(--accent); }
+  .check-label:has(input:checked) { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 24px; border-radius: 8px; font-family: var(--sans);
+    font-size: 14px; font-weight: 500; cursor: pointer; border: none;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+  #output { margin-top: 2rem; }
+
+  .plan-grid { display: grid; gap: 0.75rem; }
+
+  .meal-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem 1.25rem;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+  }
+
+  .meal-day { font-size: 11px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 3px; }
+  .meal-name { font-family: var(--serif); font-size: 1.05rem; font-weight: 400; }
+  .meal-meta { font-size: 12px; color: var(--text3); margin-top: 3px; }
+
+  .meal-link {
+    font-size: 12px; color: var(--accent); text-decoration: none;
+    white-space: nowrap; padding-top: 2px;
+  }
+  .meal-link:hover { text-decoration: underline; }
+
+  .section-title {
+    font-family: var(--serif); font-size: 1.1rem; font-weight: 400;
+    margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+    font-style: italic;
+  }
+
+  .shop-list {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.4rem; list-style: none;
+  }
+
+  .shop-list li {
+    font-size: 13px; color: var(--text2); padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .shop-category { margin-bottom: 1.5rem; }
+  .shop-cat-title { font-size: 11px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 0.5rem; }
+
+  .loading { display: flex; align-items: center; gap: 10px; color: var(--text2); font-size: 14px; padding: 2rem 0; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error { background: #FDEAEA; border: 1px solid #F5C6C6; border-radius: 8px; padding: 1rem 1.25rem; color: #7A1F1F; font-size: 14px; }
+
+  .save-bar {
+    margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
+    display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;
+  }
+
+  .saved-notice { font-size: 13px; color: var(--accent); }
+
+  a.scan-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--text3); text-decoration: none;
+    margin-top: 0.5rem;
+  }
+  a.scan-link:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <h1>Meal Planner</h1>
+    <div class="meta">
+      <span class="pill" id="season-pill">—</span>
+      <span class="db-status" id="db-status">Loading recipes…</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="controls">
+      <div>
+        <label>Season</label>
+        <select id="season">
+          <option value="auto">Auto-detect</option>
+          <option value="Spring">Spring</option>
+          <option value="Summer">Summer</option>
+          <option value="Autumn">Autumn</option>
+          <option value="Winter">Winter</option>
+        </select>
+      </div>
+      <div>
+        <label>Weekday dinners</label>
+        <select id="weekday-count">
+          <option value="4" selected>4</option>
+          <option value="3">3</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <label>Exclude this week</label>
+      <div class="checkbox-row">
+        <label class="check-label"><input type="checkbox" id="excl-eggs" value="eggs"> No eggs</label>
+        <label class="check-label"><input type="checkbox" id="excl-mush" value="mushrooms"> No mushrooms</label>
+        <label class="check-label"><input type="checkbox" id="excl-pasta"> No pasta</label>
+      </div>
+    </div>
+
+    <div style="margin-bottom:1.25rem;">
+      <label>Last week's meals (to avoid repeats)</label>
+      <input type="text" id="last-week" placeholder="e.g. Roast chicken, Pasta arrabiata…">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="generate-btn" onclick="generate()">Generate plan</button>
+      <a href="scan.html" class="scan-link">📷 Add a recipe from a cookbook →</a>
+    </div>
+  </section>
+
+  <div id="output"></div>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────────
+const CACHE_KEY = 'mp_recipes_cache';
+const CACHE_TTL = 24 * 60 * 60 * 1000;
+const PREFS_KEY = 'mp_prefs';
+const LAST_WEEK_KEY = 'mp_last_week';
+
+const STAPLES = new Set(['salt','pepper','olive oil','oil','water','flour','sugar','butter','garlic',
+  'onion','stock','bay leaves','bay leaf','vinegar','lemon','egg','eggs','baking powder',
+  'baking soda','bicarbonate of soda','yeast','milk','cream','bread','breadcrumbs']);
+
+const ALIASES = {
+  'spring onions':'spring onion','scallions':'spring onion','scallion':'spring onion',
+  'white onion':'onion','brown onion':'onion','red onion':'onion',
+  'greek yoghurt':'yoghurt','natural yoghurt':'yoghurt','plain yoghurt':'yoghurt',
+  'double cream':'cream','single cream':'cream','soured cream':'cream',
+  'passata':'tomatoes','chopped tomatoes':'tomatoes','tinned tomatoes':'tomatoes',
+  'chickpeas':'chickpeas','tinned chickpeas':'chickpeas',
+  'courgette':'courgette','zucchini':'courgette',
+  'aubergine':'aubergine','eggplant':'aubergine',
+  'coriander':'coriander','cilantro':'coriander'
+};
+
+const CATEGORY_MAP = {
+  'Meat': ['chicken','lamb','beef','pork','sausage','chorizo','bacon','pancetta','duck','turkey','mince'],
+  'Fish & Seafood': ['salmon','cod','haddock','prawns','shrimp','tuna','mackerel','anchovy','anchovies','squid','mussels','clams','sea bass','trout'],
+  'Veg': ['tomato','tomatoes','courgette','aubergine','spinach','kale','broccoli','cauliflower','carrot','celery','leek','fennel','chard','cabbage','beetroot','asparagus','peas','sweetcorn','sweet potato','potato','butternut squash','squash','pepper','peppers','cucumber','avocado'],
+  'Dairy': ['yoghurt','cream','parmesan','feta','mozzarella','ricotta','cheddar','cheese','halloumi','butter','crème fraîche'],
+  'Herbs & Spices': ['basil','thyme','rosemary','parsley','mint','dill','tarragon','oregano','cumin','turmeric','paprika','chilli','ginger','cinnamon','cardamom','sumac','za\'atar','harissa','miso'],
+  'Pulses & Grains': ['chickpeas','lentils','beans','black beans','cannellini','rice','quinoa','bulgur','freekeh','pearl barley','pasta','noodles'],
+  'Pantry': ['tahini','soy sauce','fish sauce','coconut milk','lemon juice','lime juice','capers','olives','sun-dried tomatoes','pomegranate molasses','maple syrup','honey']
+};
+
+// ── Season detection ───────────────────────────────────────────────────────────
+function getSeason() {
+  const sel = document.getElementById('season').value;
+  if (sel !== 'auto') return sel;
+  const m = new Date().getMonth() + 1;
+  if (m >= 3 && m <= 5) return 'Spring';
+  if (m >= 6 && m <= 8) return 'Summer';
+  if (m >= 9 && m <= 11) return 'Autumn';
+  return 'Winter';
+}
+
+// ── Recipe loading ─────────────────────────────────────────────────────────────
+let RECIPES = [];
+
+async function loadRecipes() {
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    const { data, ts } = JSON.parse(cached);
+    if (Date.now() - ts < CACHE_TTL) {
+      RECIPES = data;
+      updateDbStatus(data.length, ts);
+      return;
+    }
+  }
+  try {
+    const r = await fetch('/api/recipes');
+    const { recipes, updated } = await r.json();
+    RECIPES = recipes;
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data: recipes, ts: Date.now() }));
+    updateDbStatus(recipes.length, Date.now());
+  } catch {
+    if (cached) {
+      const { data, ts } = JSON.parse(cached);
+      RECIPES = data;
+      updateDbStatus(data.length, ts, true);
+    } else {
+      document.getElementById('db-status').textContent = 'Could not load recipes';
+    }
+  }
+}
+
+function updateDbStatus(count, ts, stale) {
+  const ago = Math.round((Date.now() - ts) / 3600000);
+  const agoStr = ago < 1 ? 'just now' : `${ago}h ago`;
+  document.getElementById('db-status').textContent =
+    `${count} recipes · synced ${agoStr}${stale ? ' (offline)' : ''}`;
+}
+
+// ── Prefs persistence ──────────────────────────────────────────────────────────
+function savePrefs() {
+  localStorage.setItem(PREFS_KEY, JSON.stringify({
+    eggs: document.getElementById('excl-eggs').checked,
+    mush: document.getElementById('excl-mush').checked,
+    pasta: document.getElementById('excl-pasta').checked
+  }));
+  localStorage.setItem(LAST_WEEK_KEY, document.getElementById('last-week').value);
+}
+
+function loadPrefs() {
+  const p = localStorage.getItem(PREFS_KEY);
+  if (p) {
+    const { eggs, mush, pasta } = JSON.parse(p);
+    document.getElementById('excl-eggs').checked = eggs;
+    document.getElementById('excl-mush').checked = mush;
+    document.getElementById('excl-pasta').checked = pasta;
+  }
+  const lw = localStorage.getItem(LAST_WEEK_KEY);
+  if (lw) document.getElementById('last-week').value = lw;
+}
+
+// ── Generate ───────────────────────────────────────────────────────────────────
+async function generate() {
+  savePrefs();
+  const season = getSeason();
+  document.getElementById('season-pill').textContent = season;
+
+  const exclEggs = document.getElementById('excl-eggs').checked;
+  const exclMush = document.getElementById('excl-mush').checked;
+  const exclPasta = document.getElementById('excl-pasta').checked;
+  const lastWeek = document.getElementById('last-week').value.trim();
+  const weekdayCount = parseInt(document.getElementById('weekday-count').value);
+
+  const output = document.getElementById('output');
+  output.innerHTML = '<div class="loading"><div class="spinner"></div> Generating your meal plan…</div>';
+  document.getElementById('generate-btn').disabled = true;
+
+  // Filter recipes
+  let pool = RECIPES.filter(r => {
+    if (exclEggs && r.contains_eggs) return false;
+    if (exclMush && r.contains_mushrooms) return false;
+    if (r.season !== 'All' && r.season !== season) return false;
+    return true;
+  });
+
+  const weekdayPool = pool.filter(r => r.weekday_safe);
+  const weekendPool = pool;
+
+  const recipeList = pool.map(r =>
+    `- ${r.name} (${r.author || 'unknown'}, ${r.type}, ${r.cook_time ? r.cook_time + 'min' : '?'}, ${r.season})`
+  ).join('\n');
+
+  const prompt = `You are planning a week of dinners for someone who cooks at a high standard.
+
+Season: ${season}
+Weekday dinners needed: ${weekdayCount} (must be under 60 min active cook time)
+Weekend dinners needed: 1 (no time restriction)
+Total: ${weekdayCount + 1} dinners
+
+Constraints:
+- No eggs (partner's preference)${exclMush ? '\n- No mushrooms' : ''}${exclPasta ? '\n- No pasta this week' : '\n- Maximum 1 pasta dish'}
+- Avoid repeating last week's meals
+- Vary protein, cuisine, and cooking style across the week
+- Weekend meal can be more ambitious
+
+Last week's meals: ${lastWeek || 'none provided'}
+
+Available recipes (name, author, type, cook time, season):
+${recipeList}
+
+Return a JSON object with this exact structure:
+{
+  "plan": [
+    { "day": "Monday", "recipe": "exact recipe name from list", "note": "brief one-line reason" },
+    ...
+  ]
+}
+
+Pick ${weekdayCount} weekday recipes from weekday-safe options, and 1 weekend recipe for Sunday. Return ONLY the JSON.`;
+
+  try {
+    const r = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await r.json();
+    const text = data.content?.[0]?.text || '';
+    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    renderPlan(parsed.plan, season);
+  } catch (err) {
+    output.innerHTML = `<div class="error">Something went wrong: ${err.message}</div>`;
+  } finally {
+    document.getElementById('generate-btn').disabled = false;
+  }
+}
+
+// ── Render plan ────────────────────────────────────────────────────────────────
+function renderPlan(plan, season) {
+  const output = document.getElementById('output');
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const ordered = days.filter(d => plan.find(p => p.day === d)).map(d => plan.find(p => p.day === d));
+
+  let html = '<div class="plan-grid">';
+  ordered.forEach(p => {
+    const recipe = RECIPES.find(r => r.name.toLowerCase() === p.recipe.toLowerCase());
+    const location = recipe?.location || '';
+    const locationHtml = location.startsWith('http')
+      ? `<a class="meal-link" href="${location}" target="_blank">View recipe →</a>`
+      : location ? `<span class="meal-link" style="color:var(--text3)">${location}</span>` : '';
+
+    html += `<div class="meal-card">
+      <div>
+        <div class="meal-day">${p.day}</div>
+        <div class="meal-name">${p.recipe}</div>
+        <div class="meal-meta">${p.note || ''}</div>
+      </div>
+      ${locationHtml}
+    </div>`;
+  });
+  html += '</div>';
+
+  // Shopping list
+  const allIngredients = ordered.map(p => {
+    const r = RECIPES.find(r => r.name.toLowerCase() === p.recipe.toLowerCase());
+    return r?.ingredients || '';
+  }).join(',');
+
+  const shopping = buildShoppingList(allIngredients);
+
+  html += '<div style="margin-top:2rem;">';
+  html += '<div class="section-title">Shopping list</div>';
+
+  Object.entries(shopping).forEach(([cat, items]) => {
+    if (!items.length) return;
+    html += `<div class="shop-category">
+      <div class="shop-cat-title">${cat}</div>
+      <ul class="shop-list">${items.map(i => `<li>${i}</li>`).join('')}</ul>
+    </div>`;
+  });
+
+  html += `</div>
+  <div class="save-bar">
+    <button class="btn btn-secondary" onclick="savePlan()">Save as last week's plan</button>
+    <span class="saved-notice" id="saved-notice"></span>
+  </div>`;
+
+  output.innerHTML = html;
+
+  // Store plan for saving
+  window._currentPlan = ordered.map(p => p.recipe).join(', ');
+}
+
+function savePlan() {
+  document.getElementById('last-week').value = window._currentPlan || '';
+  localStorage.setItem(LAST_WEEK_KEY, window._currentPlan || '');
+  document.getElementById('saved-notice').textContent = '✓ Saved';
+  setTimeout(() => document.getElementById('saved-notice').textContent = '', 3000);
+}
+
+// ── Shopping list ──────────────────────────────────────────────────────────────
+function buildShoppingList(raw) {
+  const items = raw.split(',')
+    .map(s => s.trim().toLowerCase().replace(/^(fresh|dried|large|small|medium|chopped|sliced|diced|frozen|tinned|canned|ground|whole)\s+/g, '').trim())
+    .filter(s => s.length > 1 && !STAPLES.has(s));
+
+  const canonical = items.map(i => ALIASES[i] || i);
+  const unique = [...new Set(canonical)].sort();
+
+  const result = Object.fromEntries(Object.keys(CATEGORY_MAP).map(k => [k, []]));
+  result['Other'] = [];
+
+  unique.forEach(item => {
+    let matched = false;
+    for (const [cat, keywords] of Object.entries(CATEGORY_MAP)) {
+      if (keywords.some(k => item.includes(k))) {
+        result[cat].push(item);
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) result['Other'].push(item);
+  });
+
+  return result;
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+loadPrefs();
+loadRecipes();
+document.getElementById('season-pill').textContent = getSeason();
+</script>
+</body>
+</html>
